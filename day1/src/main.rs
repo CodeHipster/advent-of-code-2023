@@ -1,11 +1,11 @@
-use std::fs::{File, self};
+use std::fs;
 
 mod part1;
 mod part2;
 
 fn main() {
     let file = read_file("./input.txt");
-    // part1::part1()
+    part1::part1(file.clone());
     part2::part2(file);
 }
 
