@@ -4,7 +4,7 @@ use crate::schematic::Schematic;
 
 pub(crate) fn part2(file: &String) {
   let schema = Schematic::new(file);
-  println!("{schema}");
+  // println!("{schema}");
   let parts = schema.get_parts();
   let sum = parts
     .iter()

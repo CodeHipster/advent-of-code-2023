@@ -7,7 +7,7 @@ mod schematic;
 fn main() {
     let file = read_file("./input.txt");
     // let file = read_file("./test.txt");
-    // part1::part1(&file);
+    part1::part1(&file);
     part2::part2(&file);
 }
 
