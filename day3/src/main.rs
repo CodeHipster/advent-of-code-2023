@@ -2,10 +2,11 @@ use std::fs;
 
 mod part1;
 mod part2;
+mod schematic;
 
 fn main() {
-    // let file = read_file("./input.txt");
-    let file = read_file("./test.txt");
+    let file = read_file("./input.txt");
+    // let file = read_file("./test.txt");
     // part1::part1(&file);
     part2::part2(&file);
 }
