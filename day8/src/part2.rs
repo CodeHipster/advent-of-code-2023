@@ -42,7 +42,7 @@ pub(crate) fn part2(file: &String) {
   let steps = steps.iter().rev().fold(1u64,|acc, steps| {
     let cast = *steps as u64;
     println!("acc:{acc}, steps:{steps}, mod?: {}", &acc % cast);
-    let gcd = Gcd::gcd(acc, cast);
+    let gcd = Gcd::gcd(acc, cast); //greatest common denominator
     return (acc * cast) / gcd
   });
   
