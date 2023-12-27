@@ -1,5 +1,5 @@
-use std::{fmt::Display, mem::swap, ops::Add};
-use std::collections::HashSet;  
+use std::collections::{HashMap, HashSet};
+use std::ops::Add;
 
 use grid::{grid, Grid};
 
@@ -21,9 +21,41 @@ pub(crate) fn part2(file: &String) {
   pipe[0].2 = start_shape;
 
   // transform pipe into a hashmap
-  // transform S to the pipe element it resembles
+  let pipe_map: HashMap<_, _> = pipe.into_iter().fold(HashMap::new(), |mut acc, (a, b, c)| {
+    acc.insert((a, b), c);
+    acc
+  });
 
   // scan each line
+  let mut included = 0;
+  for r in 0..grid.rows() {
+    let mut up = false;
+    let mut down = false;
+    for c in 0..grid.cols() {
+      if let Some(shape) = pipe_map.get(&(r, c)) {
+        match shape {
+          '|' => {
+            // crossing the loop, we are inside or outside.
+            up = !up;
+            down = !down;
+          }
+          '7' | 'F' => {
+            // hitting a corner going down, depending on the direction of the next/previous corner we can end up inside.
+            down = !down;
+          }
+          'L' | 'J' => {
+            // hitting a corner going up, depending on the direction of the next/previous corner we can end up inside.
+            up = !up;
+          }
+          _ => {} // running along the pipe, not crossing a border.
+        }
+      } else {
+        if up && down {
+          included += 1;
+        }
+      }
+    }
+  }
   // when reaching a pipe element mark up and/or down flag
   // when reaching a non pipe element count as inner if both up and down are flagged
   // | flags up and down
@@ -31,8 +63,7 @@ pub(crate) fn part2(file: &String) {
   // L & J flags up
   // 7 & F flag down
 
-
-  println!("{pipe:?}")
+  println!("{included}");
 }
 
 fn start_pipe_shape(pipe: &Vec<Location>) -> char {
@@ -41,7 +72,7 @@ fn start_pipe_shape(pipe: &Vec<Location>) -> char {
   let second = pipe[1];
   let last = pipe.last().unwrap();
 
-  let from = get_offset(&start,last);
+  let from = get_offset(&start, last);
   let to = get_offset(&second, &start);
 
   let from_options = match from {
@@ -61,7 +92,7 @@ fn start_pipe_shape(pipe: &Vec<Location>) -> char {
   };
   // find the shape that is in the from & to list.
 
-  let mut intersection = from_options.intersection(&to_options); 
+  let mut intersection = from_options.intersection(&to_options);
   let start_shape = *(intersection.next().unwrap());
 
   println!("from: {}, start: {start_shape}, to: {}", last.2, second.2);
