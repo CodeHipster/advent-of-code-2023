@@ -1,13 +1,16 @@
-use std::fs;
+use std::{fs, time::Instant};
 
 mod part1;
 mod part2;
 
 fn main() {
-    let file = read_file("./input.txt");
-    // let file = read_file("./test.txt");
-    part1::part1(&file);
-    // part2::part2(&file);
+  let now = Instant::now();
+  let file = read_file("./input.txt");
+  // let file = read_file("./test.txt");
+  // part1::part1(&file);
+  part2::part2(&file);
+
+  println!("found answer in {:0.2?}", now.elapsed());
 }
 
 fn read_file(filename: &str) -> String {

@@ -109,10 +109,6 @@ fn possibilities(pattern: &str, groups: VecDeque<usize>) -> i32 {
 // if this is a leaf node, None is returned
 // if there are no more options an empty vec is returned.
 fn next(mut state: State, pattern: &str) -> Node {
-  
-  if !valid_state(pattern, &state.pattern){
-    return Node::Invalid;
-  }
 
   let max = pattern.len();
   if state.pattern.len() < max {
@@ -134,10 +130,18 @@ fn next(mut state: State, pattern: &str) -> Node {
           pattern: state.pattern.clone() + pat,
           groups: state.groups.clone(),
         })
+        .filter(|state| valid_state(pattern, &state.pattern))
         .collect(),
     );
   } else {
     println!("leaf node: {state:?}");
+    // fill up with working tonsen until the end.
+    while state.pattern.len() < pattern.len(){
+      state.pattern.push('.');
+    }
+    if !valid_state(pattern, &state.pattern){
+      return Node::Invalid;
+    }
     return Node::Leaf(state);
   }
 }
