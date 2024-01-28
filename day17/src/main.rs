@@ -1,6 +1,6 @@
 use std::{fs, time::Instant};
 
-mod part1;
+// mod part1;
 mod part2;
 mod part2_2;
 

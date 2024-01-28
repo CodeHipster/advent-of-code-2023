@@ -1,4 +1,6 @@
 use std::collections::BTreeSet;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
 use std::ops::Add;
 use std::thread::sleep;
 use std::time::Duration;
@@ -8,117 +10,229 @@ use grid::grid;
 use grid::Grid;
 use itertools::Itertools;
 
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+struct Coord {
+  x: i32,
+  y: i32,
+}
+
+impl Coord{
+  // fn rotate_left(mut self) -> Coord{
+  //   std::mem::swap(&mut self.x, &mut self.y);
+  //   self.x = -self.x;
+  //   self
+  // }
+
+  // fn rotate_right(mut self) -> Coord{
+  //   std::mem::swap(&mut self.x, &mut self.y);
+  //   self.y = -self.y;
+  //   self
+  // }
+}
+
+impl Add for Coord {
+  type Output = Coord;
+
+  fn add(self, rhs: Self) -> Self::Output {
+    let x = self.x + rhs.x;
+    let y = self.y + rhs.y;
+    Coord { x, y }
+  }
+}
+
+impl Into<(i32, i32)> for Coord {
+  fn into(self) -> (i32, i32) {
+    (self.x, self.y)
+  }
+}
+
+impl From<(i32, i32)> for Coord {
+  fn from(c: (i32, i32)) -> Coord {
+    Coord { x: c.0, y: c.1 }
+  }
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+enum Direction {
+  LEFT,
+  RIGHT,
+  UP,
+  DOWN,
+}
+
+impl Direction{
+  fn turn_left(&self) -> Direction{
+    match self {
+        Direction::LEFT => Self::DOWN,
+        Direction::RIGHT => Self::UP,
+        Direction::UP => Self::LEFT,
+        Direction::DOWN => Self::RIGHT,
+    }
+  }
+
+  fn turn_right(&self) -> Direction{
+    match self {
+        Direction::LEFT => Self::UP,
+        Direction::RIGHT => Self::DOWN,
+        Direction::UP => Self::RIGHT,
+        Direction::DOWN => Self::LEFT,
+    }
+  }
+}
+
+impl TryFrom<Coord> for Direction {
+  type Error = String;
+  fn try_from(dir: Coord) -> Result<Self, Self::Error> {
+    match dir {
+      Coord { x: 1, y: 0 } => Ok(Direction::RIGHT),
+      Coord { x: -1, y: 0 } => Ok(Direction::LEFT),
+      Coord { x: 0, y: -1 } => Ok(Direction::UP),
+      Coord { x: 0, y: 1 } => Ok(Direction::DOWN),
+      _ => Err(format!("Can't form a direction from {dir:?}")),
+    }
+  }
+}
+
+impl Into<(i32, i32)> for Direction {
+  fn into(self) -> (i32, i32) {
+    match self {
+      Direction::RIGHT => (1, 0),
+      Direction::LEFT => (-1, 0),
+      Direction::UP => (0, -1),
+      Direction::DOWN => (0, 1),
+    }
+  }
+}
+
+impl Into<Coord> for Direction {
+  fn into(self) -> Coord {
+    match self {
+      Direction::RIGHT => (1, 0).into(),
+      Direction::LEFT => (-1, 0).into(),
+      Direction::UP => (0, -1).into(),
+      Direction::DOWN => (0, 1).into(),
+    }
+  }
+}
+
+#[derive(Eq, PartialEq, Debug)]
+struct Crucible {
+  heat_loss: i32,
+  pos: Coord,
+  dir: Direction,
+  in_line: u8,
+}
+
+// Invert ordering by comparing other to self.
+impl Ord for Crucible {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    other.heat_loss.cmp(&self.heat_loss)
+  }
+}
+
+impl PartialOrd for Crucible {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    match other.heat_loss.partial_cmp(&self.heat_loss) {
+      Some(core::cmp::Ordering::Equal) => {}
+      ord => return ord,
+    }
+    None
+  }
+}
+
 pub(crate) fn part2(file: &String) {
-  // solve it like a variant of a path finding algorithm
-
-  // have a sorted state stack
-  // sort on minimal potential heat at the end tile
-  // So add the current accumulated heat and the manhattan distance to the end.
-  // pop the top and add the possible future states to the stack.
-
-  // The state consists of a direction, steps in line, row, column
-  // next states are forward, left, right,
-  // or only left and right if steps in line == 3
-  // a step left or right resets the steps in line to 1
-
   let city_map = city_map(file);
 
-  let mut states: BTreeSet<State> = BTreeSet::new();
+  let mut states: BinaryHeap<Crucible> = BinaryHeap::new();
+  let mut seen = HashSet::new();
 
-  let w = distance_to_end(&city_map, 0, 0);
-  let initial_state_right = State {
-    weight: w,
-    dir: (0, 1),
-    line: 1,
-    row: 0,
-    col: 0,
+  let initial_state_right = Crucible {
     heat_loss: 0,
+    pos: (0, 0).into(),
+    dir: Direction::RIGHT,
+    in_line: 0,
   };
-  states.insert(initial_state_right);
-  let initial_state_down = State {
-    weight: w,
-    dir: (1, 0),
-    line: 1,
-    row: 0,
-    col: 0,
+
+  let initial_state_down = Crucible {
     heat_loss: 0,
+    pos: (0, 0).into(),
+    dir: Direction::DOWN,
+    in_line: 0,
   };
-  states.insert(initial_state_down);
-//1212
-//1214
+  
+  states.push(initial_state_down);
+  states.push(initial_state_right);
+
+  println!("{states:?}");
+  let end_pos = Coord {
+    x: (city_map.cols() - 1) as i32,
+    y: (city_map.rows() - 1) as i32,
+  };
   let mut min = i32::MAX;
-  while let Some(state) = states.pop_first() {
-    if state.row == city_map.rows() - 1 && state.col == city_map.cols() - 1 && state.line >= 4 {
-      if state.heat_loss < min {
-        min = state.heat_loss;
+  while let Some(crucible) = states.pop() {
+    if end_pos == crucible.pos && crucible.in_line >= 4 {
+      if crucible.heat_loss < min {
+        min = crucible.heat_loss;
         println!("found new min value: {min}");
       }
       continue;
     }
-    // early exit, we won't reach faster than previous.
-    if state.heat_loss + distance_to_end(&city_map, state.row, state.col) as i32 >= min {
-      // println!("early exit");
-      continue;
-    }
-    // println!("resolved state: {state:?}");
-    let next = resolve(&city_map, state);
 
+    // println!("resolving state: {crucible:?}");
+    let next = resolve(&city_map, crucible);
     // println!("to {next:?}");
-    // sleep(Duration::from_millis(1000));
-    states.extend(next);
+
+    for crucible in next{
+      if seen.insert((crucible.pos, crucible.dir, crucible.in_line)){
+        states.push(crucible);
+      }
+    }
+
+    // sleep(Duration::from_millis(100));
   }
 
   println!("{min}")
 }
 
-fn resolve(map: &Grid<char>, state: State) -> Vec<State> {
+fn resolve(map: &Grid<char>, crucible: Crucible) -> Vec<Crucible> {
   let mut states = vec![];
   // forward state
-  if state.line < 9 {
-    if let Some(pos) = moove(state.dir, (state.row, state.col), map) {
+  if crucible.in_line < 9 {
+    if let Some(pos) = moove(crucible.dir, crucible.pos, map) {
       // println!("pos when moving straight: {pos:?}");
-      let hl = map.get(pos.0, pos.1).unwrap().to_digit(10).unwrap();
-      let md = distance_to_end(map, pos.0, pos.1);
-      states.push(State {
-        weight: state.heat_loss as usize + hl as usize + md,
-        heat_loss: state.heat_loss + hl as i32,
-        line: state.line + 1,
-        row: pos.0,
-        col: pos.1,
-        dir: state.dir,
+      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      states.push(Crucible {
+        heat_loss: crucible.heat_loss + hl as i32,
+        in_line: crucible.in_line + 1,
+        pos,
+        dir: crucible.dir,
       })
     }
   }
 
-  if state.line >= 4 {
+  if crucible.in_line >= 4 {
     // left
-    let left = left(state.dir);
-    if let Some(pos) = moove(left, (state.row, state.col), map) {
+    let left = crucible.dir.turn_left();
+    if let Some(pos) = moove(left, crucible.pos, map) {
       // println!("pos when moving left: {pos:?}");
-      let hl = map.get(pos.0, pos.1).unwrap().to_digit(10).unwrap();
-      let md = distance_to_end(map, pos.0, pos.1);
-      states.push(State {
-        weight: state.heat_loss as usize + hl as usize + md,
-        heat_loss: state.heat_loss + hl as i32,
-        line: 1,
-        row: pos.0,
-        col: pos.1,
+      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      states.push(Crucible {
+        heat_loss: crucible.heat_loss + hl as i32,
+        in_line: 1,
+        pos,
         dir: left,
       })
     }
 
     // right
-    let right = right(state.dir);
-    if let Some(pos) = moove(right, (state.row, state.col), map) {
+    let right = crucible.dir.turn_right();
+    if let Some(pos) = moove(right, crucible.pos, map) {
       // println!("pos when moving right: {pos:?}");
-      let hl = map.get(pos.0, pos.1).unwrap().to_digit(10).unwrap();
-      let md = distance_to_end(map, pos.0, pos.1);
-      states.push(State {
-        weight: state.heat_loss as usize + hl as usize + md,
-        heat_loss: state.heat_loss + hl as i32,
-        line: 1,
-        row: pos.0,
-        col: pos.1,
+      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      states.push(Crucible {
+        heat_loss: crucible.heat_loss + hl as i32,
+        in_line: 1,
+        pos,
         dir: right,
       })
     }
@@ -129,44 +243,16 @@ fn resolve(map: &Grid<char>, state: State) -> Vec<State> {
 
 // move in direction on grid, (row,col)
 // return none if moving out of the grid.
-fn moove(dir: (i8, i8), from: (usize, usize), map: &Grid<char>) -> Option<(usize, usize)> {
+fn moove(dir: Direction, from: Coord, map: &Grid<char>) -> Option<Coord> {
+  let dir: Coord = dir.into();
   // println!("moving from: {from:?} in direction: {dir:?}");
-  if (from.0 as i32 + dir.0 as i32) < 0 {
-    return None;
-  } else if (from.1 as i32 + dir.1 as i32) < 0 {
-    return None;
-  } else if (from.0 as i32 + dir.0 as i32) >= map.rows() as i32 {
-    return None;
-  } else if (from.1 as i32 + dir.1 as i32) >= map.cols() as i32 {
+  let result = from + dir;
+  if result.x < 0 || result.y < 0 || result.x >= map.cols() as i32 || result.y >= map.rows() as i32
+  {
     return None;
   } else {
-    return Some((
-      (from.0 as i32 + dir.0 as i32) as usize,
-      (from.1 as i32 + dir.1 as i32) as usize,
-    ));
+    return Some(from + dir);
   }
-}
-
-fn left(dir: (i8, i8)) -> (i8, i8) {
-  (-dir.1, dir.0)
-}
-
-fn right(dir: (i8, i8)) -> (i8, i8) {
-  (dir.1, -dir.0)
-}
-
-fn distance_to_end(map: &Grid<char>, row: usize, col: usize) -> usize {
-  ((map.cols() - 1) - col) + ((map.rows() - 1) - row)
-}
-
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
-struct State {
-  weight: usize,
-  heat_loss: i32,
-  line: i8,
-  row: usize,
-  col: usize,
-  dir: (i8, i8),
 }
 
 fn city_map(file: &String) -> Grid<char> {
