@@ -1,9 +1,6 @@
-use std::collections::BTreeSet;
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::ops::Add;
-use std::thread::sleep;
-use std::time::Duration;
 use std::vec;
 
 use grid::grid;
@@ -178,8 +175,9 @@ pub(crate) fn part2(file: &String) {
 
 fn resolve(map: &Grid<u32>, crucible: Crucible) -> Vec<Crucible> {
   let mut states = vec![];
+
   // forward state
-  if crucible.in_line < 9 {
+  if crucible.in_line < 10 {
     if let Some(pos) = moove(crucible.dir, crucible.pos, map) {
       // println!("pos when moving straight: {pos:?}");
       let hl = map.get(pos.y, pos.x).unwrap();
