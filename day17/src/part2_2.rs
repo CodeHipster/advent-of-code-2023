@@ -82,52 +82,6 @@ impl PartialOrd for Crucible {
   }
 }
 
-impl Crucible {
-  fn successors(&self, grid: &Vec<Vec<u8>>) -> Vec<Self> {
-      let rows = grid.len();
-      let cols = grid[0].len();
-
-      let mut successors = Vec::new();
-      for dir in [
-          Direction::Up,
-          Direction::Down,
-          Direction::Left,
-          Direction::Right,
-      ] {
-          if self.dir == dir && self.moves_in_dir == 3 {
-              // already moved 3 tiles in a straight line, can't move further
-              continue;
-          }
-          if self.dir.opposite() == dir {
-              // can't move in opposite direction
-              continue;
-          }
-          // simulate a move inside the bounds
-          if let Some(pos) = self.pos.forward(&dir, rows, cols) {
-              // calculate the total cost to get to that neighbour
-              // it's the total cost to get to the current node + the cost to travel to the neighbour
-              let cost = self.cost + grid[pos.row][pos.col] as u32;
-
-              // increment straight_moves if we went straight, else we moved 1 tile in the current direction
-              let moves_in_dir = if self.dir == dir {
-                  self.moves_in_dir + 1
-              } else {
-                  1
-              };
-
-              successors.push(Crucible {
-                  pos,
-                  cost,
-                  dir,
-                  moves_in_dir,
-              })
-          }
-      }
-
-      successors
-  }
-}
-
 fn parse(input: &str) -> Vec<Vec<u8>> {
   input
       .lines()
@@ -137,46 +91,6 @@ fn parse(input: &str) -> Vec<Vec<u8>> {
               .collect()
       })
       .collect()
-}
-
-pub fn part_1(input: &str) -> u32 {
-  let grid = parse(input);
-  let goal = Coord {
-      row: grid.len() - 1,
-      col: grid[0].len() - 1,
-  };
-
-  let mut pq = BinaryHeap::new();
-  let mut seen = HashSet::new();
-
-  let right = Crucible {
-      cost: grid[0][1] as u32,
-      dir: Direction::Right,
-      pos: Coord { row: 0, col: 1 },
-      moves_in_dir: 1,
-  };
-  pq.push(right);
-
-  let down = Crucible {
-      cost: grid[1][0] as u32,
-      dir: Direction::Down,
-      pos: Coord { row: 1, col: 0 },
-      moves_in_dir: 1,
-  };
-  pq.push(down);
-
-  while let Some(crucible) = pq.pop() {
-      if crucible.pos == goal {
-          return crucible.cost;
-      }
-      for crucible in crucible.successors(&grid) {
-          if seen.insert((crucible.pos, crucible.dir, crucible.moves_in_dir)) {
-              pq.push(crucible);
-          }
-      }
-  }
-
-  panic!("No path found")
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -245,7 +159,6 @@ impl UltraCrucible {
               })
           }
       }
-
       successors
   }
 }

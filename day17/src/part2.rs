@@ -16,20 +16,6 @@ struct Coord {
   y: i32,
 }
 
-impl Coord{
-  // fn rotate_left(mut self) -> Coord{
-  //   std::mem::swap(&mut self.x, &mut self.y);
-  //   self.x = -self.x;
-  //   self
-  // }
-
-  // fn rotate_right(mut self) -> Coord{
-  //   std::mem::swap(&mut self.x, &mut self.y);
-  //   self.y = -self.y;
-  //   self
-  // }
-}
-
 impl Add for Coord {
   type Output = Coord;
 
@@ -115,28 +101,24 @@ impl Into<Coord> for Direction {
   }
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct Crucible {
-  heat_loss: i32,
+  heat_loss: u32,
   pos: Coord,
   dir: Direction,
   in_line: u8,
 }
 
-// Invert ordering by comparing other to self.
+
 impl Ord for Crucible {
   fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-    other.heat_loss.cmp(&self.heat_loss)
+      other.heat_loss.cmp(&self.heat_loss)
   }
 }
 
 impl PartialOrd for Crucible {
   fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-    match other.heat_loss.partial_cmp(&self.heat_loss) {
-      Some(core::cmp::Ordering::Equal) => {}
-      ord => return ord,
-    }
-    None
+      Some(self.cmp(other))
   }
 }
 
@@ -168,7 +150,7 @@ pub(crate) fn part2(file: &String) {
     x: (city_map.cols() - 1) as i32,
     y: (city_map.rows() - 1) as i32,
   };
-  let mut min = i32::MAX;
+  let mut min = u32::MAX;
   while let Some(crucible) = states.pop() {
     if end_pos == crucible.pos && crucible.in_line >= 4 {
       if crucible.heat_loss < min {
@@ -194,15 +176,15 @@ pub(crate) fn part2(file: &String) {
   println!("{min}")
 }
 
-fn resolve(map: &Grid<char>, crucible: Crucible) -> Vec<Crucible> {
+fn resolve(map: &Grid<u32>, crucible: Crucible) -> Vec<Crucible> {
   let mut states = vec![];
   // forward state
   if crucible.in_line < 9 {
     if let Some(pos) = moove(crucible.dir, crucible.pos, map) {
       // println!("pos when moving straight: {pos:?}");
-      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      let hl = map.get(pos.y, pos.x).unwrap();
       states.push(Crucible {
-        heat_loss: crucible.heat_loss + hl as i32,
+        heat_loss: crucible.heat_loss + hl,
         in_line: crucible.in_line + 1,
         pos,
         dir: crucible.dir,
@@ -215,9 +197,9 @@ fn resolve(map: &Grid<char>, crucible: Crucible) -> Vec<Crucible> {
     let left = crucible.dir.turn_left();
     if let Some(pos) = moove(left, crucible.pos, map) {
       // println!("pos when moving left: {pos:?}");
-      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      let hl = map.get(pos.y, pos.x).unwrap();
       states.push(Crucible {
-        heat_loss: crucible.heat_loss + hl as i32,
+        heat_loss: crucible.heat_loss + hl,
         in_line: 1,
         pos,
         dir: left,
@@ -228,9 +210,9 @@ fn resolve(map: &Grid<char>, crucible: Crucible) -> Vec<Crucible> {
     let right = crucible.dir.turn_right();
     if let Some(pos) = moove(right, crucible.pos, map) {
       // println!("pos when moving right: {pos:?}");
-      let hl = map.get(pos.y, pos.x).unwrap().to_digit(10).unwrap();
+      let hl = map.get(pos.y, pos.x).unwrap();
       states.push(Crucible {
-        heat_loss: crucible.heat_loss + hl as i32,
+        heat_loss: crucible.heat_loss + hl,
         in_line: 1,
         pos,
         dir: right,
@@ -243,7 +225,7 @@ fn resolve(map: &Grid<char>, crucible: Crucible) -> Vec<Crucible> {
 
 // move in direction on grid, (row,col)
 // return none if moving out of the grid.
-fn moove(dir: Direction, from: Coord, map: &Grid<char>) -> Option<Coord> {
+fn moove(dir: Direction, from: Coord, map: &Grid<u32>) -> Option<Coord> {
   let dir: Coord = dir.into();
   // println!("moving from: {from:?} in direction: {dir:?}");
   let result = from + dir;
@@ -255,10 +237,10 @@ fn moove(dir: Direction, from: Coord, map: &Grid<char>) -> Option<Coord> {
   }
 }
 
-fn city_map(file: &String) -> Grid<char> {
+fn city_map(file: &String) -> Grid<u32> {
   let mut grid = grid![];
   file.lines().for_each(|line| {
-    grid.push_row(line.chars().collect_vec());
+    grid.push_row(line.chars().map(|c|c.to_digit(10).unwrap()).collect_vec());
   });
   grid
 }

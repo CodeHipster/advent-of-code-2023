@@ -7,9 +7,9 @@ mod part2_2;
 fn main() {
   let now = Instant::now();
   let file = read_file("./input.txt");
-  // let file = read_file("./test.txt");
+  // let file = read_file("./test2.txt");
   // part1::part1(&file);
-  // part2::part2(&file);
+  part2::part2(&file);
   part2_2::part_2(&file);
 
   println!("found answer in {:0.2?}", now.elapsed());
